@@ -8,19 +8,17 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.HttpRequestDecoder
 import io.netty.handler.codec.http.HttpResponseEncoder
-import io.netty.util.NetUtil
 import org.protox.http.FrontendHandler
 
-var backendEventLoopGroup = NioEventLoopGroup()
+var backendEventLoopGroup = NioEventLoopGroup(1)
+
+val bossGroup = NioEventLoopGroup(1)
+val workerGroup = NioEventLoopGroup(1)
+
 
 fun main(args: Array<String>) {
 
-    val bossGroup = NioEventLoopGroup()
-    val workerGroup = NioEventLoopGroup()
-
     var serverBootstrap = ServerBootstrap()
-
-    NetUtil.SOMAXCONN
 
     try {
         serverBootstrap

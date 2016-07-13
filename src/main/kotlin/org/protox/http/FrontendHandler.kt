@@ -6,7 +6,6 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.*
 import io.netty.util.ReferenceCountUtil
-import org.protox.backendEventLoopGroup
 import org.protox.tryCloseChannel
 
 class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
@@ -37,7 +36,7 @@ class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
                 val bootstrap = Bootstrap()
-                        .group(backendEventLoopGroup)
+                        .group(ctx.channel().eventLoop())
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<Channel> () {
                             override fun initChannel(ch: Channel) {
@@ -83,7 +82,6 @@ class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable?) {
-//        super.exceptionCaught(ctx, cause)
         tryCloseChannel(ctx.channel())
         tryCloseChannel(backChn)
     }

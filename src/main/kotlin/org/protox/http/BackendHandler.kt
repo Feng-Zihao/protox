@@ -65,8 +65,6 @@ class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         tryCloseChannel(ctx.channel())
         tryCloseChannel(frontChn)
-//        super.exceptionCaught(ctx, cause)
-
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
