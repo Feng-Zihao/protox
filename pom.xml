@@ -94,6 +94,8 @@
                 <artifactId>appassembler-maven-plugin</artifactId>
                 <version>1.10</version>
                 <configuration>
+                    <useWildcardClassPath>true</useWildcardClassPath>
+                    <repositoryLayout>flat</repositoryLayout>
                     <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
                     <target>${project.build.directory}</target>
                     <programs>
