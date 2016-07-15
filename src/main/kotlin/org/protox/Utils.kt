@@ -2,8 +2,10 @@ package org.protox
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
+import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
+import javax.net.ssl.SSLEngine
 
 /**
  * Created by fengzh on 7/12/2016 AD.
@@ -18,3 +20,5 @@ fun tryCloseChannel(chn: Channel?, listener: GenericFutureListener<out Future<An
         }
     }
 }
+
+var SSLEngine = SslContextBuilder.forClient().build();

@@ -1,0 +1,8 @@
+listen: 8080
+#server-cert:
+#server-key:
+rules:
+  -
+    match: http://gg.local.protox.me
+    forward: https://baidu.com
+

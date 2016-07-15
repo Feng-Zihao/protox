@@ -5,16 +5,21 @@ import io.netty.channel.*
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.*
+import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.ReferenceCountUtil
+import org.protox.Config
 import org.protox.tryCloseChannel
 
-class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
 
-    var serverRequest: HttpRequest? = null
-    var clientRequest: HttpRequest? = null
+class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObject>(false) {
+
+    lateinit var serverRequest: HttpRequest
+    lateinit var clientRequest: HttpRequest
     var consumeFirstContent: Boolean = false
 
     var backChn: Channel? = null
+
+    lateinit var matchRule: Config.Rule
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
@@ -25,13 +30,32 @@ class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
         ReferenceCountUtil.retain(msg)
         if (msg is HttpRequest) {
             serverRequest = msg
-            clientRequest = DefaultHttpRequest(
-                    serverRequest!!.protocolVersion(),
-                    serverRequest!!.method(),
-                    serverRequest!!.uri())
 
-            clientRequest!!.headers().add(serverRequest!!.headers())
-            clientRequest!!.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+            var rule = config.matchRuleOrNull(serverRequest)
+            if (rule == null) {
+                val response = DefaultFullHttpResponse(
+                        serverRequest!!.protocolVersion(),
+                        HttpResponseStatus.BAD_GATEWAY
+                )
+                ctx.writeAndFlush(response).addListener {
+                    tryCloseChannel(ctx.channel())
+                }
+                return
+            }
+
+            matchRule = rule
+
+            val host = matchRule.forwardUri.host;
+            val port = matchRule.forwardPort;
+
+            clientRequest = DefaultHttpRequest(
+                    serverRequest.protocolVersion(),
+                    serverRequest.method(),
+                    serverRequest.uri())
+
+            clientRequest.headers().add(serverRequest.headers())
+            clientRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+            clientRequest.headers().set(HttpHeaderNames.HOST, host)
 
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
@@ -40,14 +64,20 @@ class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<Channel> () {
                             override fun initChannel(ch: Channel) {
-//                                ch.pipeline().addLast(LoggingHandler())
+                                if (matchRule.forwardHttps) {
+                                    ch.pipeline().addLast(
+                                            SslContextBuilder.forClient().build().newHandler(ch.alloc(),
+                                                    matchRule.forwardHost,
+                                                    matchRule.forwardPort)
+                                    );
+                                }
                                 ch.pipeline().addLast(HttpRequestEncoder())
                                 ch.pipeline().addLast(HttpResponseDecoder())
                                 ch.pipeline().addLast(BackendHandler(ctx.channel() as SocketChannel))
                             }
                         }).option(ChannelOption.AUTO_READ, false);
 
-                val channelFuture = bootstrap.connect("114.67.23.99", 8123)
+                val channelFuture = bootstrap.connect(matchRule.forwardHost, matchRule.forwardPort)
 
                 channelFuture.addListener {
                     if (it.isSuccess) {
@@ -88,8 +118,10 @@ class FrontendHandler : SimpleChannelInboundHandler<HttpObject>(false) {
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
         super.channelInactive(ctx)
-        if (serverRequest != null) {
+        try {
             ReferenceCountUtil.release(serverRequest);
+        } catch (e : UninitializedPropertyAccessException) {
+            // pass
         }
     }
 }
