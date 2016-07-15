@@ -117,7 +117,12 @@
                 <configuration>
                     <useWildcardClassPath>true</useWildcardClassPath>
                     <repositoryLayout>flat</repositoryLayout>
+                    <target>${project.build.directory}</target>
+                    <configurationDirectory>etc</configurationDirectory>
                     <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                    <configurationSourceDirectory>src/main/resources</configurationSourceDirectory>
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
                     <target>${project.build.directory}</target>
                     <programs>
                         <program>
@@ -129,11 +134,8 @@
                         <daemon>
                             <id>protox</id>
                             <!-- the next line is added by default if you don't have wrapperMainClass's setting -->
-                            <!--<wrapperMainClass>org.tanukisoftware.wrapper.WrapperStartStopApp</wrapperMainClass>-->
                             <mainClass>org.protox.ProtoxKt</mainClass>
-                            <!--<commandLineArguments>-->
-                                <!--<commandLineArgument>start</commandLineArgument>-->
-                            <!--</commandLineArguments>-->
+
                             <platforms>
                                 <platform>jsw</platform>
                             </platforms>

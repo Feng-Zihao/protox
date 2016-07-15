@@ -39,11 +39,15 @@ class Config(val listen: Int = 8080,
         val forwardHttps: Boolean get() = forwardUri.scheme.equals(HttpScheme.HTTPS.name().toString(), false)
 
         fun match(request: HttpRequest): Boolean {
-            var host = request.headers()[HOST.toString()]
+            var host = request.headers()["X-Forwarded-Host"]
+            if (host.isNullOrBlank()) {
+                host = request.headers()[HOST.toString()]
+            }
             if (host.contains(":")) {
                 host = host.split(":")[0]
             }
-            return host.equals(matchUri.host, true)
+            println(host)
+            return host.equals(matchUri.host, false)
         }
 
     }

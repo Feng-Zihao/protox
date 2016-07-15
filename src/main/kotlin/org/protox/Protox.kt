@@ -45,7 +45,7 @@ fun main(args: Array<String>) {
                     }
                 })
                 .childOption(ChannelOption.AUTO_READ, false)
-                .bind("0.0.0.0", 9090).sync().channel().closeFuture().sync()
+                .bind("0.0.0.0", config.listen).sync().channel().closeFuture().sync()
 
     } finally {
         bossGroup.shutdownGracefully()

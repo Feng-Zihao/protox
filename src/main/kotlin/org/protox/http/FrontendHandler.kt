@@ -34,7 +34,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
             var rule = config.matchRuleOrNull(serverRequest)
             if (rule == null) {
                 val response = DefaultFullHttpResponse(
-                        serverRequest!!.protocolVersion(),
+                        serverRequest.protocolVersion(),
                         HttpResponseStatus.BAD_GATEWAY
                 )
                 ctx.writeAndFlush(response).addListener {
