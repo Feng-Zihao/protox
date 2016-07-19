@@ -3,6 +3,8 @@ listen: 8080
 #server-key:
 rules:
   -
-    match: http://gg.local.protox.me
-    forward: https://baidu.com
-
+    match: 'gg.local.protox.me'
+    forward: 'https://ipv4.google.com'
+  -
+    match: '*.fb.local.protox.me'
+    forward: 'https://*.facebook.com'

@@ -3,6 +3,7 @@ package org.protox
 import io.netty.handler.codec.http.HttpHeaderNames.HOST
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpScheme
+import org.protox.http.WildcardURL
 import java.net.URI
 
 /**
@@ -20,23 +21,10 @@ class Config(val listen: Int = 8080,
         }
     }
 
-    class Rule(val match: String, val forward: String) {
+    class Rule(match: String, forward: String) {
 
-        val matchUri = URI(match)
-        val forwardUri = URI(forward)
-        val forwardHost: String get() = forwardUri.host
-        val forwardPort: Int get() {
-            if (forwardUri.port < 0) {
-                if (forwardUri.scheme.equals(HttpScheme.HTTPS.name().toString(), false)) {
-                    return HttpScheme.HTTPS.port()
-                } else if (forwardUri.scheme.equals(HttpScheme.HTTP.name().toString(), false)) {
-                    return HttpScheme.HTTP.port()
-                }
-            }
-            return forwardUri.port
-        }
-
-        val forwardHttps: Boolean get() = forwardUri.scheme.equals(HttpScheme.HTTPS.name().toString(), false)
+        val matchUrl = WildcardURL(match)
+        val forwardUrl = WildcardURL(forward)
 
         fun match(request: HttpRequest): Boolean {
             var host = request.headers()["X-Forwarded-Host"]
@@ -47,8 +35,28 @@ class Config(val listen: Int = 8080,
                 host = host.split(":")[0]
             }
             println(host)
-            return host.equals(matchUri.host, false)
+
+            return match(host)
+
         }
 
+        fun match(host: String): Boolean {
+            if (matchUrl.isWildcard) {
+                // wildcard domain
+
+                // match   :         *.abc.xyz   remove * and reversed    zyx.cba.
+                // host    : 1)        abc.xyz                            zyx.cba
+                //         : 2)   a123.abc.xyz                            zyx.cba.321a
+
+                // reversed
+
+                val reverseMatchHost = matchUrl.hostPattern.substring(1).reversed()
+                val reverseHost = host.reversed()
+
+                return ((reverseHost + ".").startsWith(reverseMatchHost, true))
+            }
+            return host.equals(matchUrl.hostPattern, false)
+        }
     }
+
 }

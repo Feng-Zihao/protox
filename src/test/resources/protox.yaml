@@ -3,6 +3,6 @@ listen: 8080
 #server-key:
 rules:
   -
-    match: http://gg.aaa.com
-    forward: https://ipv4.bbb.com
+    match: 'http://gg.aaa.com'
+    forward: 'https://ipv4.bbb.com'
 

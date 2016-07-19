@@ -15,6 +15,9 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
     lateinit var serverRequest: HttpRequest
     lateinit var clientRequest: HttpRequest
+    lateinit var remoteHost : String
+
+    var remotePort : Int = 0
     var consumeFirstContent: Boolean = false
 
     var backChn: Channel? = null
@@ -45,8 +48,8 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
             matchRule = rule
 
-            val host = matchRule.forwardUri.host;
-            val port = matchRule.forwardPort;
+            remoteHost = matchRule.forwardUrl.hostPattern
+            remotePort = matchRule.forwardUrl.port
 
             clientRequest = DefaultHttpRequest(
                     serverRequest.protocolVersion(),
@@ -55,7 +58,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
             clientRequest.headers().add(serverRequest.headers())
             clientRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-            clientRequest.headers().set(HttpHeaderNames.HOST, host)
+            clientRequest.headers().set(HttpHeaderNames.HOST, remoteHost)
 
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
@@ -64,12 +67,12 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<Channel> () {
                             override fun initChannel(ch: Channel) {
-                                if (matchRule.forwardHttps) {
+                                if (matchRule.forwardUrl.scheme == HttpScheme.HTTPS) {
                                     ch.pipeline().addLast(
                                             SslContextBuilder.forClient().build().newHandler(ch.alloc(),
-                                                    matchRule.forwardHost,
-                                                    matchRule.forwardPort)
-                                    );
+                                                    remoteHost,
+                                                    remotePort)
+                                    )
                                 }
                                 ch.pipeline().addLast(HttpRequestEncoder())
                                 ch.pipeline().addLast(HttpResponseDecoder())
@@ -77,7 +80,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                             }
                         }).option(ChannelOption.AUTO_READ, false);
 
-                val channelFuture = bootstrap.connect(matchRule.forwardHost, matchRule.forwardPort)
+                val channelFuture = bootstrap.connect(remoteHost, remotePort)
 
                 channelFuture.addListener {
                     if (it.isSuccess) {

@@ -5,6 +5,7 @@ import io.netty.channel.Channel
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
+import java.util.regex.Pattern
 import javax.net.ssl.SSLEngine
 
 /**
@@ -21,4 +22,8 @@ fun tryCloseChannel(chn: Channel?, listener: GenericFutureListener<out Future<An
     }
 }
 
-var SSLEngine = SslContextBuilder.forClient().build();
+var SSLEngine = SslContextBuilder.forClient().build()
+
+val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z-_]+)*)")
+
+val WILDCARD_URL_PATTERN : Pattern = Pattern.compile("((http(s?))://)?(\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+)")
