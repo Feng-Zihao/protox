@@ -26,12 +26,12 @@ class ProtoxTest {
     }
 
     @Test fun testRule() {
-        val rule = Config.Rule(match = "https://aa.bb.com", forward = "https://cc.aa.cc")
-        assertThat(rule.forwardUrl.scheme, equalTo(HttpScheme.HTTPS))
+        val rule = Config.ProxyRule(match = "https://aa.bb.com", forward = "https://cc.aa.cc")
+        assertThat(rule.forwardRule.scheme, equalTo(HttpScheme.HTTPS))
     }
 
     @Test fun testWildcardMatching() {
-        val rule = Config.Rule(match = "*abc.xyz", forward = "https://*.remote.abc.xyz")
+        val rule = Config.ProxyRule(match = "*.abc.xyz", forward = "https://*.remote.abc.xyz")
         assertTrue { rule.match("abc.xyz") }
         assertTrue { rule.match("a123.abc.xyz") }
         assertFalse { rule.match("abc.xyzz") }

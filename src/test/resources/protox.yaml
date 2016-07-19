@@ -5,4 +5,3 @@ rules:
   -
     match: 'http://gg.aaa.com'
     forward: 'https://ipv4.bbb.com'
-

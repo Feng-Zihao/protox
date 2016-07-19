@@ -22,7 +22,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
     var backChn: Channel? = null
 
-    lateinit var matchRule: Config.Rule
+    lateinit var matchProxyRule: Config.ProxyRule
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
@@ -34,8 +34,8 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
         if (msg is HttpRequest) {
             serverRequest = msg
 
-            var rule = config.matchRuleOrNull(serverRequest)
-            if (rule == null) {
+            var proxyRule = config.matchProxyRuleOrNull(serverRequest)
+            if (proxyRule == null) {
                 val response = DefaultFullHttpResponse(
                         serverRequest.protocolVersion(),
                         HttpResponseStatus.BAD_GATEWAY
@@ -46,10 +46,10 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                 return
             }
 
-            matchRule = rule
+            matchProxyRule = proxyRule
 
-            remoteHost = matchRule.forwardUrl.hostPattern
-            remotePort = matchRule.forwardUrl.port
+            remoteHost = matchProxyRule.forwardRule.hostPattern
+            remotePort = matchProxyRule.forwardRule.port
 
             clientRequest = DefaultHttpRequest(
                     serverRequest.protocolVersion(),
@@ -67,7 +67,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<Channel> () {
                             override fun initChannel(ch: Channel) {
-                                if (matchRule.forwardUrl.scheme == HttpScheme.HTTPS) {
+                                if (matchProxyRule.forwardRule.scheme == HttpScheme.HTTPS) {
                                     ch.pipeline().addLast(
                                             SslContextBuilder.forClient().build().newHandler(ch.alloc(),
                                                     remoteHost,

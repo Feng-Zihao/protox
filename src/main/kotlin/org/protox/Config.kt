@@ -2,9 +2,7 @@ package org.protox
 
 import io.netty.handler.codec.http.HttpHeaderNames.HOST
 import io.netty.handler.codec.http.HttpRequest
-import io.netty.handler.codec.http.HttpScheme
 import org.protox.http.WildcardURL
-import java.net.URI
 
 /**
  * Created by fengzh on 7/15/16.
@@ -13,18 +11,18 @@ import java.net.URI
 class Config(val listen: Int = 8080,
              val serverCert: String? = null,
              val serverKey: String? = null,
-             val rules: List<Rule> = emptyList()) {
+             val rules: List<ProxyRule> = emptyList()) {
 
-    fun matchRuleOrNull(request: HttpRequest): Rule? {
+    fun matchProxyRuleOrNull(request: HttpRequest): ProxyRule? {
         return rules.firstOrNull {
             it.match(request)
         }
     }
 
-    class Rule(match: String, forward: String) {
+    class ProxyRule(match: String, forward: String) {
 
-        val matchUrl = WildcardURL(match)
-        val forwardUrl = WildcardURL(forward)
+        val matchRule = WildcardURL(match)
+        val forwardRule = WildcardURL(forward)
 
         fun match(request: HttpRequest): Boolean {
             var host = request.headers()["X-Forwarded-Host"]
@@ -41,21 +39,22 @@ class Config(val listen: Int = 8080,
         }
 
         fun match(host: String): Boolean {
-            if (matchUrl.isWildcard) {
+            if (matchRule.isWildcard) {
                 // wildcard domain
 
-                // match   :         *.abc.xyz   remove * and reversed    zyx.cba.
-                // host    : 1)        abc.xyz                            zyx.cba
-                //         : 2)   a123.abc.xyz                            zyx.cba.321a
+                // match   :         *.abc.xyz
+                // host    : 1)        abc.xyz
+                //         : 2)   a123.abc.xyz
 
-                // reversed
-
-                val reverseMatchHost = matchUrl.hostPattern.substring(1).reversed()
-                val reverseHost = host.reversed()
-
-                return ((reverseHost + ".").startsWith(reverseMatchHost, true))
+                return ("." + host).endsWith(matchRule.hostPattern.substring(1), true)
             }
-            return host.equals(matchUrl.hostPattern, false)
+            return host.equals(matchRule.hostPattern, false)
+        }
+
+        fun getForwardHost(host: String): String {
+
+            // TODO: grab the "*" part
+            return ""
         }
     }
 
