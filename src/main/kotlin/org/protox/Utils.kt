@@ -2,6 +2,8 @@ package org.protox
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
+import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpRequest
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
 import java.util.regex.Pattern
@@ -18,6 +20,17 @@ fun tryCloseChannel(chn: Channel?, listener: GenericFutureListener<out Future<An
             }
         }
     }
+}
+
+fun getOriginalHost(request: HttpRequest): String {
+    var host = request.headers()["X-Forwarded-Host"]
+    if (host.isNullOrBlank()) {
+        host = request.headers()[HttpHeaderNames.HOST.toString()]
+    }
+    if (host.contains(":")) {
+        host = host.split(":")[0]
+    }
+    return host
 }
 
 val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z-_]+)*)")

@@ -8,3 +8,9 @@ rules:
   -
     match: '*.fb.local.protox.me'
     forward: 'https://*.facebook.com'
+  -
+    match: 'http://jd.example.com'
+    forward: 'https://www.jd.com'
+  -
+    match: 'http://*.baidu.example.com'
+    forward: 'https://*.baidu.com'

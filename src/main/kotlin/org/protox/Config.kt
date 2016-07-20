@@ -25,17 +25,7 @@ class Config(val listen: Int = 8080,
         val forwardRule = WildcardURL(forward)
 
         fun match(request: HttpRequest): Boolean {
-            var host = request.headers()["X-Forwarded-Host"]
-            if (host.isNullOrBlank()) {
-                host = request.headers()[HOST.toString()]
-            }
-            if (host.contains(":")) {
-                host = host.split(":")[0]
-            }
-            println(host)
-
-            return match(host)
-
+            return match(getOriginalHost(request))
         }
 
         fun match(host: String): Boolean {
@@ -52,10 +42,20 @@ class Config(val listen: Int = 8080,
         }
 
         fun getForwardHost(host: String): String {
+            if (matchRule.isWildcard && forwardRule.isWildcard) {
+                var prefix = host.substring(0, host.length + 2 - matchRule.hostPattern.length)
+                if (prefix.isNotEmpty()) {
+                    prefix += "."
+                }
+                return prefix + forwardRule.hostPattern.substring(2)
+            }
+            return forwardRule.hostPattern
+        }
 
-            // TODO: grab the "*" part
+        fun getReturnedHost(host: String): String {
             return ""
         }
+
     }
 
 }

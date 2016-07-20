@@ -4,12 +4,18 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder
+import io.netty.handler.codec.http.cookie.CookieDecoder
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder
 import io.netty.util.ReferenceCountUtil
 import org.protox.tryCloseChannel
+import org.slf4j.LoggerFactory
 
 class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<HttpObject>(false) {
 
-    var serverResponse: HttpResponse? = null
+    val LOGGER = LoggerFactory.getLogger(BackendHandler::class.java)
+
+    lateinit var serverResponse: HttpResponse
     var clientResponse: HttpResponse? = null
     var consumeFirstContent: Boolean = false
 
@@ -25,7 +31,14 @@ class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<
             serverResponse = DefaultHttpResponse(
                     msg.protocolVersion(), msg.status(), msg.headers()
             )
-            serverResponse!!.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+
+            LOGGER.info("{}", clientResponse!!.status().code())
+            clientResponse!!.headers().forEach {
+                LOGGER.info("<<< ${it.key} ${it.value}")
+            }
+
+
+            serverResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
                 frontChn.writeAndFlush(serverResponse).addListener {

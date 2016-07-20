@@ -5,9 +5,11 @@ import io.netty.channel.*
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.*
+import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
+import org.protox.getOriginalHost
 import org.protox.tryCloseChannel
 
 
@@ -48,7 +50,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
             matchProxyRule = proxyRule
 
-            remoteHost = matchProxyRule.forwardRule.hostPattern
+            remoteHost = proxyRule.getForwardHost(getOriginalHost(serverRequest))
             remotePort = matchProxyRule.forwardRule.port
 
             clientRequest = DefaultHttpRequest(
@@ -74,11 +76,12 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                                                     remotePort)
                                     )
                                 }
+                                ch.pipeline().addLast(LoggingHandler())
                                 ch.pipeline().addLast(HttpRequestEncoder())
                                 ch.pipeline().addLast(HttpResponseDecoder())
                                 ch.pipeline().addLast(BackendHandler(ctx.channel() as SocketChannel))
                             }
-                        }).option(ChannelOption.AUTO_READ, false);
+                        }).option(ChannelOption.AUTO_READ, false)
 
                 val channelFuture = bootstrap.connect(remoteHost, remotePort)
 
