@@ -4,14 +4,12 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder
-import io.netty.handler.codec.http.cookie.CookieDecoder
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder
 import io.netty.util.ReferenceCountUtil
+import org.protox.Config
 import org.protox.tryCloseChannel
 import org.slf4j.LoggerFactory
 
-class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<HttpObject>(false) {
+class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRule) : SimpleChannelInboundHandler<HttpObject>(false) {
 
     val LOGGER = LoggerFactory.getLogger(BackendHandler::class.java)
 
@@ -32,13 +30,19 @@ class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<
                     msg.protocolVersion(), msg.status(), msg.headers()
             )
 
-            LOGGER.info("{}", clientResponse!!.status().code())
-            clientResponse!!.headers().forEach {
+            serverResponse.headers()[HttpHeaderNames.CONNECTION] = HttpHeaderValues.CLOSE
+            if (serverResponse.headers()[HttpHeaderNames.LOCATION] != null) {
+                serverResponse.headers()[HttpHeaderNames.LOCATION] = proxyRule.getReturnedLocation(
+                        serverResponse.headers()[HttpHeaderNames.LOCATION]
+                )
+            }
+
+            LOGGER.info("{}", serverResponse.status().code())
+            serverResponse.headers().forEach {
                 LOGGER.info("<<< ${it.key} ${it.value}")
             }
 
 
-            serverResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
                 frontChn.writeAndFlush(serverResponse).addListener {
@@ -56,7 +60,6 @@ class BackendHandler(val frontChn: SocketChannel) : SimpleChannelInboundHandler<
 
         }
     }
-
 
 
     private fun flushAndTryReadNextOrClose(ctx: ChannelHandlerContext, msg: HttpContent) {

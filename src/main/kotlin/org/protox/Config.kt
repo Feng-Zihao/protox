@@ -1,8 +1,9 @@
 package org.protox
 
-import io.netty.handler.codec.http.HttpHeaderNames.HOST
 import io.netty.handler.codec.http.HttpRequest
+import io.netty.handler.codec.http.HttpScheme
 import org.protox.http.WildcardURL
+import java.net.URL
 
 /**
  * Created by fengzh on 7/15/16.
@@ -44,16 +45,25 @@ class Config(val listen: Int = 8080,
         fun getForwardHost(host: String): String {
             if (matchRule.isWildcard && forwardRule.isWildcard) {
                 var prefix = host.substring(0, host.length + 2 - matchRule.hostPattern.length)
-                if (prefix.isNotEmpty()) {
-                    prefix += "."
-                }
                 return prefix + forwardRule.hostPattern.substring(2)
             }
             return forwardRule.hostPattern
         }
 
         fun getReturnedHost(host: String): String {
+            if (matchRule.isWildcard && forwardRule.isWildcard) {
+                var prefix = host.substring(0, host.length + 2 - forwardRule.hostPattern.length)
+                return prefix + matchRule.hostPattern.substring(2)
+            }
+            return matchRule.hostPattern
+
             return ""
+        }
+
+        fun getReturnedLocation(location: String): String {
+            var url = URL(location)
+            val replacedHost = getReturnedHost(url.host)
+            return URL(if (matchRule.scheme == HttpScheme.HTTP) "http" else "https", replacedHost, url.file).toString()
         }
 
     }
