@@ -119,7 +119,7 @@
                     <repositoryLayout>flat</repositoryLayout>
                     <target>${project.build.directory}</target>
                     <configurationDirectory>etc</configurationDirectory>
-                    <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+                    <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
                     <copyConfigurationDirectory>true</copyConfigurationDirectory>
                     <configurationSourceDirectory>src/main/resources</configurationSourceDirectory>
                     <copyConfigurationDirectory>true</copyConfigurationDirectory>

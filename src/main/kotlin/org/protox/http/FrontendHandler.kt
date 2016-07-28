@@ -83,7 +83,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                             }
                         }).option(ChannelOption.AUTO_READ, false)
 
-                val channelFuture = bootstrap.connect("www.jd.com", remotePort)
+                val channelFuture = bootstrap.connect(remoteHost, remotePort)
                 println(remoteHost)
 
                 channelFuture.addListener {

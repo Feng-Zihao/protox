@@ -3,14 +3,17 @@ listen: 8080
 #server-key:
 rules:
   -
-    match: 'gg.local.protox.me'
-    forward: 'https://ipv4.google.com'
-  -
-    match: '*.fb.local.protox.me'
-    forward: 'https://*.facebook.com'
-  -
-    match: 'http://jd.example.com'
-    forward: 'https://www.jd.com'
-  -
-    match: 'http://*.baidu.example.com'
-    forward: 'https://*.baidu.com'
+    match: 127.0.0.1
+    forward: 10.200.83.160
+#  -
+#    match: 'gg.local.protox.me'
+#    forward: 'https://ipv4.google.com'
+#  -
+#    match: '*.fb.local.protox.me'
+#    forward: 'https://*.facebook.com'
+#  -
+#    match: 'http://jd.example.com'
+#    forward: 'https://www.jd.com'
+#  -
+#    match: 'http://*.baidu.example.com'
+#    forward: 'https://*.baidu.com'
