@@ -30,7 +30,7 @@ class WildcardURL(text: String) {
             }
             hostPattern = holder[1]
         } else {
-            scheme = null
+            scheme = HttpScheme.HTTP
             hostPattern = holder[0]
             port = 80
         }

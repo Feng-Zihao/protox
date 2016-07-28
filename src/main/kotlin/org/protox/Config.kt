@@ -56,14 +56,14 @@ class Config(val listen: Int = 8080,
                 return prefix + matchRule.hostPattern.substring(2)
             }
             return matchRule.hostPattern
-
-            return ""
         }
 
         fun getReturnedLocation(location: String): String {
             var url = URL(location)
             val replacedHost = getReturnedHost(url.host)
-            return URL(if (matchRule.scheme == HttpScheme.HTTP) "http" else "https", replacedHost, url.file).toString()
+            val replacedLocation = URL(if (matchRule.scheme!!.equals(HttpScheme.HTTP)) "http" else "https", replacedHost, url.file).toString()
+            println("$location replace to $replacedLocation")
+            return replacedLocation
         }
 
     }
