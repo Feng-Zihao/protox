@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
+import io.netty.handler.timeout.IdleStateEvent
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
 import org.protox.tryCloseChannel
@@ -15,7 +16,7 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
 
     lateinit var serverResponse: HttpResponse
     var clientResponse: HttpResponse? = null
-    var consumeFirstContent: Boolean = false
+    @Volatile var consumeFirstContent: Boolean = false
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
@@ -36,13 +37,6 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
                         serverResponse.headers()[HttpHeaderNames.LOCATION]
                 )
             }
-
-            LOGGER.info("{}", serverResponse.status().code())
-            serverResponse.headers().forEach {
-                LOGGER.info("<<< ${it.key} ${it.value}")
-            }
-
-
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
                 frontChn.writeAndFlush(serverResponse).addListener {
@@ -57,7 +51,6 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
             } else {
                 flushAndTryReadNextOrClose(ctx, msg)
             }
-
         }
     }
 
@@ -70,7 +63,7 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
                     ctx.read()
                 } else {
                     tryCloseChannel(ctx.channel())
-                    tryCloseChannel(frontChn)
+//                    tryCloseChannel(frontChn)
                 }
             } else {
                 tryCloseChannel(ctx.channel())
@@ -88,6 +81,14 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
         super.channelInactive(ctx)
         if (clientResponse != null) {
             ReferenceCountUtil.release(clientResponse)
+        }
+    }
+
+    override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
+        if (evt is IdleStateEvent) {
+            LOGGER.info("{}", evt)
+            tryCloseChannel(ctx.channel())
+            tryCloseChannel(frontChn)
         }
     }
 }

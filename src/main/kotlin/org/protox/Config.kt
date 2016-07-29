@@ -62,7 +62,6 @@ class Config(val listen: Int = 8080,
             var url = URL(location)
             val replacedHost = getReturnedHost(url.host)
             val replacedLocation = URL(if (matchRule.scheme!!.equals(HttpScheme.HTTP)) "http" else "https", replacedHost, url.file).toString()
-            println("$location replace to $replacedLocation")
             return replacedLocation
         }
 

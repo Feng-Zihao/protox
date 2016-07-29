@@ -11,18 +11,20 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.HttpRequestDecoder
 import io.netty.handler.codec.http.HttpResponseEncoder
+import io.netty.handler.timeout.IdleStateHandler
 import org.apache.commons.io.IOUtils
 import org.protox.http.FrontendHandler
 
-var backendEventLoopGroup = NioEventLoopGroup(0)
+var backendEventLoopGroup = NioEventLoopGroup(1)
 
-val bossGroup = NioEventLoopGroup(0)
-val workerGroup = NioEventLoopGroup(0)
+val bossGroup = NioEventLoopGroup(1)
+val workerGroup = NioEventLoopGroup(1)
 
 
 fun main(args: Array<String>) {
 
     var serverBootstrap = ServerBootstrap()
+
 
     try {
         val mapper = ObjectMapper(YAMLFactory())
@@ -37,7 +39,7 @@ fun main(args: Array<String>) {
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .childHandler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
-//                        ch.pipeline().addLast(LoggingHandler())
+                        ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
                         ch.pipeline().addLast(HttpRequestDecoder())
                         ch.pipeline().addLast(HttpResponseEncoder())
                         ch.pipeline().addLast(FrontendHandler(config))

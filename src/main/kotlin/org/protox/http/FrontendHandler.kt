@@ -8,24 +8,31 @@ import io.netty.handler.codec.http.*
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.timeout.IdleStateEvent
+import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
+import org.protox.backendEventLoopGroup
 import org.protox.getOriginalHost
 import org.protox.tryCloseChannel
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 
 class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObject>(false) {
 
     lateinit var serverRequest: HttpRequest
     lateinit var clientRequest: HttpRequest
-    lateinit var remoteHost : String
+    lateinit var remoteHost: String
 
-    var remotePort : Int = 0
-    var consumeFirstContent: Boolean = false
+    var remotePort: Int = 0
+    @Volatile var consumeFirstContent: Boolean = false
 
     var backChn: Channel? = null
 
     var proxyRule: Config.ProxyRule? = null
+
+    var LOGGER : Logger = LoggerFactory.getLogger(FrontendHandler::class.java)
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
@@ -66,10 +73,11 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
         } else if (msg is HttpContent) {
             if (!consumeFirstContent) {
                 val bootstrap = Bootstrap()
-                        .group(ctx.channel().eventLoop())
+                        .group(backendEventLoopGroup)
                         .channel(NioSocketChannel::class.java)
-                        .handler(object : ChannelInitializer<Channel> () {
+                        .handler(object : ChannelInitializer<Channel>() {
                             override fun initChannel(ch: Channel) {
+                                ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
                                 if (proxyRule!!.forwardRule.scheme == HttpScheme.HTTPS) {
                                     ch.pipeline().addLast(
                                             SslContextBuilder.forClient().clientAuth(ClientAuth.NONE).build().newHandler(ch.alloc(),
@@ -85,7 +93,6 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                         }).option(ChannelOption.AUTO_READ, false)
 
                 val channelFuture = bootstrap.connect(remoteHost, remotePort)
-                println(remoteHost)
 
                 channelFuture.addListener {
                     if (it.isSuccess) {
@@ -128,8 +135,16 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
         super.channelInactive(ctx)
         try {
             ReferenceCountUtil.release(serverRequest);
-        } catch (e : UninitializedPropertyAccessException) {
+        } catch (e: UninitializedPropertyAccessException) {
             // pass
+        }
+    }
+
+    override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
+        if (evt is IdleStateEvent) {
+            LOGGER.info("{}", evt)
+            tryCloseChannel(ctx.channel())
+            tryCloseChannel(backChn)
         }
     }
 }
