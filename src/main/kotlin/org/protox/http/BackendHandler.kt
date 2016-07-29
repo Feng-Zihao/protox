@@ -1,99 +1,105 @@
 package org.protox.http
 
+import io.netty.channel.ChannelFutureListener.CLOSE
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
+import org.protox.GATEWAY_TIMEOUT_RESPONSE
 import org.protox.tryCloseChannel
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.*
 
 class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRule) : ChannelInboundHandlerAdapter() {
 
-    val LOGGER = LoggerFactory.getLogger(BackendHandler::class.java)
+    val LOGGER: Logger = LoggerFactory.getLogger(BackendHandler::class.java)
 
-    lateinit var serverResponse: HttpResponse
-    var clientResponse: HttpResponse? = null
-    @Volatile var consumeFirstContent: Boolean = false
+    val msgHolder: Queue<HttpObject> = ArrayDeque(10)
 
     override fun channelActive(ctx: ChannelHandlerContext) {
-        super.channelActive(ctx)
-        ctx.read()
+        ctx.channel().read()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         ReferenceCountUtil.retain(msg)
+        msgHolder.add(msg as HttpObject)
+    }
+
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+
+        var msg = msgHolder.peek()
         if (msg is HttpResponse) {
-            clientResponse = msg
-            serverResponse = DefaultHttpResponse(
-                    msg.protocolVersion(), msg.status(), msg.headers()
+            writeResponseToFrontend(ctx)
+        } else {
+            flushMsgHolderToBackendFromIdxThenReadOrClose(ctx)
+        }
+    }
+
+    private fun writeResponseToFrontend(ctx: ChannelHandlerContext) {
+        val clientResponse = msgHolder.poll() as HttpResponse
+        val serverResponse = DefaultHttpResponse(
+                clientResponse.protocolVersion(), clientResponse.status(), clientResponse.headers()
+        )
+
+        serverResponse.headers()[HttpHeaderNames.CONNECTION] = HttpHeaderValues.CLOSE
+        if (serverResponse.headers()[HttpHeaderNames.LOCATION] != null) {
+            serverResponse.headers()[HttpHeaderNames.LOCATION] = proxyRule.getReturnedLocation(
+                    serverResponse.headers()[HttpHeaderNames.LOCATION]
             )
-
-            serverResponse.headers()[HttpHeaderNames.CONNECTION] = HttpHeaderValues.CLOSE
-            if (serverResponse.headers()[HttpHeaderNames.LOCATION] != null) {
-                serverResponse.headers()[HttpHeaderNames.LOCATION] = proxyRule.getReturnedLocation(
-                        serverResponse.headers()[HttpHeaderNames.LOCATION]
-                )
-            }
-        } else if (msg is HttpContent) {
-            if (!consumeFirstContent) {
-                frontChn.writeAndFlush(serverResponse).addListener {
-                    if (it.isSuccess) {
-                        consumeFirstContent = true
-                        flushAndTryReadNextOrClose(ctx, msg)
-                    } else {
-//                        tryCloseChannel(frontChn)
-                        tryCloseChannel(ctx.channel())
-                    }
-                }
-            } else {
-                flushAndTryReadNextOrClose(ctx, msg)
-            }
         }
+
+        frontChn.writeAndFlush(serverResponse).addListener {
+            ReferenceCountUtil.safeRelease(serverResponse)
+            flushMsgHolderToBackendFromIdxThenReadOrClose(ctx)
+        }
+
     }
 
-//    override fun channelReadComplete(ctx: ChannelHandlerContext?) {
-//        LOGGER.info("ReadComplete")
-//    }
-
-    private fun flushAndTryReadNextOrClose(ctx: ChannelHandlerContext, msg: HttpContent) {
-        frontChn.writeAndFlush(msg).addListener {
-            ReferenceCountUtil.release(msg)
-            if (it.isSuccess) {
-                if (msg !is LastHttpContent) {
-                    ctx.read()
+    private fun flushMsgHolderToBackendFromIdxThenReadOrClose(ctx: ChannelHandlerContext) {
+        if (msgHolder.isNotEmpty()) {
+            val msg = msgHolder.poll()
+            frontChn.writeAndFlush(msg).addListener {
+                ReferenceCountUtil.safeRelease(msg)
+                if (msg is LastHttpContent) {
+                    ctx.channel().close()
+                    frontChn.close()
                 } else {
-                    tryCloseChannel(ctx.channel())
-//                    tryCloseChannel(frontChn)
+                    flushMsgHolderToBackendFromIdxThenReadOrClose(ctx)
                 }
-            } else {
-                tryCloseChannel(ctx.channel())
-//                tryCloseChannel(frontChn)
             }
+        } else {
+            ctx.channel().read()
         }
-    }
-
-    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        LOGGER.error("{}", cause)
-        tryCloseChannel(ctx.channel())
-//        tryCloseChannel(frontChn)
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
-        if (clientResponse != null) {
-            ReferenceCountUtil.release(clientResponse)
-        }
+        clearMsgHolder()
         super.channelInactive(ctx)
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is IdleStateEvent) {
-            LOGGER.info("{}", evt)
-            tryCloseChannel(ctx.channel())
-//            tryCloseChannel(frontChn)
+            LOGGER.debug("{}", evt.state())
+            frontChn.writeAndFlush(GATEWAY_TIMEOUT_RESPONSE).addListener {
+                frontChn.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(CLOSE)
+            }
         }
+    }
+
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        super.exceptionCaught(ctx, cause)
+        tryCloseChannel(ctx.channel())
+        tryCloseChannel(frontChn)
+    }
+
+    private fun clearMsgHolder() {
+        msgHolder.forEach {
+            ReferenceCountUtil.safeRelease(it)
+        }
+        msgHolder.clear()
     }
 }

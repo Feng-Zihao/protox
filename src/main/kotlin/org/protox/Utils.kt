@@ -2,8 +2,7 @@ package org.protox
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
-import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpRequest
+import io.netty.handler.codec.http.*
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
 import java.util.concurrent.atomic.AtomicInteger
@@ -39,3 +38,25 @@ val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z
 val WILDCARD_URL_PATTERN: Pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))(:[0-9]+)?")
 
 val frontendCounter =  AtomicInteger(0)
+
+val BAD_GATEWAY_RESPONSE = DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.BAD_GATEWAY,
+        Unpooled.copiedBuffer("Bad Gateway", Charsets.UTF_8),
+        DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE),
+        EmptyHttpHeaders.INSTANCE)
+
+val GATEWAY_TIMEOUT_RESPONSE = DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.GATEWAY_TIMEOUT,
+        Unpooled.copiedBuffer("Gateway Timeout", Charsets.UTF_8),
+        DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE),
+        EmptyHttpHeaders.INSTANCE)
+
+
+val REQUEST_TIMEOUT_RESPONSE = DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.REQUEST_TIMEOUT,
+        Unpooled.copiedBuffer("Request Timeout", Charsets.UTF_8),
+        DefaultHttpHeaders().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE),
+        EmptyHttpHeaders.INSTANCE)

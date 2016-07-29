@@ -4,7 +4,7 @@ listen: 8080
 rules:
   -
     match: 127.0.0.1
-    forward: 10.200.83.160:8081
+    forward: https://127.0.0.1:9090
 #  -
 #    match: 'gg.local.protox.me'
 #    forward: 'https://ipv4.google.com'
