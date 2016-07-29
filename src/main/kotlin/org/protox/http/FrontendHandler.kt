@@ -11,15 +11,12 @@ import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.ReferenceCountUtil
-import org.protox.Config
-import org.protox.backendEventLoopGroup
-import org.protox.getOriginalHost
-import org.protox.tryCloseChannel
+import org.protox.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 
-class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObject>(false) {
+class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
 
     lateinit var serverRequest: HttpRequest
     lateinit var clientRequest: HttpRequest
@@ -39,9 +36,10 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
         ctx.read()
     }
 
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: HttpObject) {
+    override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         ReferenceCountUtil.retain(msg)
         if (msg is HttpRequest) {
+            LOGGER.debug("{}", frontendCounter.incrementAndGet())
             serverRequest = msg
 
             var matchRule = config.matchProxyRuleOrNull(serverRequest)
@@ -112,6 +110,21 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
         }
     }
 
+
+
+    override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise?) {
+        var future = ctx.write(msg, promise)
+
+        if (msg is LastHttpContent) {
+            LOGGER.debug("{}", frontendCounter.decrementAndGet())
+//            LOGGER.debug("{}", msg)
+
+            future.addListener {
+                ctx.close()
+            }
+        }
+    }
+
     private fun flushAndTryReadNext(ctx: ChannelHandlerContext, msg: HttpContent) {
         backChn!!.writeAndFlush(msg).addListener {
             ReferenceCountUtil.release(msg)
@@ -127,6 +140,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable?) {
+        LOGGER.debug("{}", cause)
         tryCloseChannel(ctx.channel())
         tryCloseChannel(backChn)
     }
@@ -142,7 +156,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is IdleStateEvent) {
-            LOGGER.info("{}", evt)
+            LOGGER.info("{}", evt.state())
             tryCloseChannel(ctx.channel())
             tryCloseChannel(backChn)
         }

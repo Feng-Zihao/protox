@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 /**
@@ -36,3 +37,5 @@ fun getOriginalHost(request: HttpRequest): String {
 val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z-_]+)*)")
 
 val WILDCARD_URL_PATTERN: Pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))(:[0-9]+)?")
+
+val frontendCounter =  AtomicInteger(0)

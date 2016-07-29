@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
+import io.netty.channel.ChannelOutboundHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -39,7 +40,7 @@ fun main(args: Array<String>) {
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .childHandler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
-                        ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
+                        ch.pipeline().addLast(IdleStateHandler(5, 5, 5))
                         ch.pipeline().addLast(HttpRequestDecoder())
                         ch.pipeline().addLast(HttpResponseEncoder())
                         ch.pipeline().addLast(FrontendHandler(config))

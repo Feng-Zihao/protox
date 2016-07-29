@@ -1,6 +1,7 @@
 package org.protox.http
 
 import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.http.*
@@ -10,7 +11,7 @@ import org.protox.Config
 import org.protox.tryCloseChannel
 import org.slf4j.LoggerFactory
 
-class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRule) : SimpleChannelInboundHandler<HttpObject>(false) {
+class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRule) : ChannelInboundHandlerAdapter() {
 
     val LOGGER = LoggerFactory.getLogger(BackendHandler::class.java)
 
@@ -23,7 +24,7 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
         ctx.read()
     }
 
-    override fun channelRead0(ctx: ChannelHandlerContext, msg: HttpObject) {
+    override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         ReferenceCountUtil.retain(msg)
         if (msg is HttpResponse) {
             clientResponse = msg
@@ -44,7 +45,7 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
                         consumeFirstContent = true
                         flushAndTryReadNextOrClose(ctx, msg)
                     } else {
-                        tryCloseChannel(frontChn)
+//                        tryCloseChannel(frontChn)
                         tryCloseChannel(ctx.channel())
                     }
                 }
@@ -54,6 +55,9 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
         }
     }
 
+//    override fun channelReadComplete(ctx: ChannelHandlerContext?) {
+//        LOGGER.info("ReadComplete")
+//    }
 
     private fun flushAndTryReadNextOrClose(ctx: ChannelHandlerContext, msg: HttpContent) {
         frontChn.writeAndFlush(msg).addListener {
@@ -67,28 +71,29 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
                 }
             } else {
                 tryCloseChannel(ctx.channel())
-                tryCloseChannel(frontChn)
+//                tryCloseChannel(frontChn)
             }
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        LOGGER.error("{}", cause)
         tryCloseChannel(ctx.channel())
-        tryCloseChannel(frontChn)
+//        tryCloseChannel(frontChn)
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
-        super.channelInactive(ctx)
         if (clientResponse != null) {
             ReferenceCountUtil.release(clientResponse)
         }
+        super.channelInactive(ctx)
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is IdleStateEvent) {
             LOGGER.info("{}", evt)
             tryCloseChannel(ctx.channel())
-            tryCloseChannel(frontChn)
+//            tryCloseChannel(frontChn)
         }
     }
 }
