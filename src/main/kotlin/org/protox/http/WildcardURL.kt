@@ -19,22 +19,31 @@ class WildcardURL(text: String) {
         if (!WILDCARD_URL_PATTERN.matcher(text).matches()) {
             throw IllegalArgumentException("%s is not a valid wildcard url".format(text))
         }
-        val holder = text.split("://")
+        var holder = text.split("://")
+        var tempPort: Int
+        var tempHostPattern: String
         if (holder.size == 2) {
             if (holder[0].equals("https", true)) {
-                port = 443
+                tempPort = 443
                 scheme = HttpScheme.HTTPS
             } else {
-                port = 80
+                tempPort = 80
                 scheme = HttpScheme.HTTP
             }
-            hostPattern = holder[1]
+            tempHostPattern = holder[1]
         } else {
             scheme = HttpScheme.HTTP
-            hostPattern = holder[0]
-            port = 80
+            tempHostPattern = holder[0]
+            tempPort = 80
+        }
+        holder = tempHostPattern.split(":")
+        if (holder.size == 2) {
+            tempHostPattern = holder[0]
+            tempPort = holder[1].toInt()
         }
 
+        port = tempPort
+        hostPattern = tempHostPattern
         isWildcard = hostPattern.startsWith("*.")
     }
 

@@ -11,14 +11,13 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.HttpRequestDecoder
 import io.netty.handler.codec.http.HttpResponseEncoder
-import io.netty.handler.logging.LoggingHandler
 import org.apache.commons.io.IOUtils
 import org.protox.http.FrontendHandler
 
-var backendEventLoopGroup = NioEventLoopGroup(1)
+var backendEventLoopGroup = NioEventLoopGroup(0)
 
-val bossGroup = NioEventLoopGroup(1)
-val workerGroup = NioEventLoopGroup(1)
+val bossGroup = NioEventLoopGroup(0)
+val workerGroup = NioEventLoopGroup(0)
 
 
 fun main(args: Array<String>) {
@@ -36,7 +35,7 @@ fun main(args: Array<String>) {
                 .group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel::class.java)
                 .option(ChannelOption.SO_REUSEADDR, true)
-                .childHandler(object : ChannelInitializer<SocketChannel> () {
+                .childHandler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
 //                        ch.pipeline().addLast(LoggingHandler())
                         ch.pipeline().addLast(HttpRequestDecoder())

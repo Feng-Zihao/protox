@@ -26,8 +26,12 @@ class ProtoxTest {
     }
 
     @Test fun testRule() {
-        val rule = Config.ProxyRule(match = "https://aa.bb.com", forward = "https://cc.aa.cc")
+        var rule = Config.ProxyRule(match = "https://aa.bb.com", forward = "https://cc.aa.cc")
         assertThat(rule.forwardRule.scheme, equalTo(HttpScheme.HTTPS))
+
+        rule = Config.ProxyRule(match = "https://11.11.11.11:8080", forward = "https://11.11.11.11:8080")
+        assertThat(rule.forwardRule.scheme, equalTo(HttpScheme.HTTPS))
+        assertThat(rule.forwardRule.port, equalTo(8080))
     }
 
     @Test fun testWildcardMatching() {
@@ -49,7 +53,7 @@ class ProtoxTest {
     }
 
     @Test fun testWildcardURLPattern() {
-        var pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))")
+        var pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))(:[0-9]+)?")
 
         assertTrue { pattern.matcher("http://abc").matches() }
         assertTrue { pattern.matcher("http://a23.abc").matches() }
@@ -58,6 +62,8 @@ class ProtoxTest {
         assertFalse { pattern.matcher("ftp://*.abc.abc").matches() }
         assertFalse { pattern.matcher("http://.abc.abc").matches() }
         assertFalse { pattern.matcher("http://*abc.abc").matches() }
+
+        assertTrue{ pattern.matcher("http://10.200.83.160:8081").matches() }
 
     }
 

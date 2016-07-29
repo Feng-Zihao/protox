@@ -35,4 +35,4 @@ fun getOriginalHost(request: HttpRequest): String {
 
 val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z-_]+)*)")
 
-val WILDCARD_URL_PATTERN: Pattern = Pattern.compile("((http(s?))://)?(\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+)")
+val WILDCARD_URL_PATTERN: Pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))(:[0-9]+)?")

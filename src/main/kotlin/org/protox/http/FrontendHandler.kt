@@ -6,6 +6,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.*
 import io.netty.handler.logging.LoggingHandler
+import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
@@ -24,7 +25,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
     var backChn: Channel? = null
 
-    lateinit var proxyRule: Config.ProxyRule
+    var proxyRule: Config.ProxyRule? = null
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         super.channelActive(ctx)
@@ -50,8 +51,8 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
 
             this.proxyRule = matchRule
 
-            remoteHost = proxyRule.getForwardHost(getOriginalHost(serverRequest))
-            remotePort = this.proxyRule.forwardRule.port
+            remoteHost = proxyRule!!.getForwardHost(getOriginalHost(serverRequest))
+            remotePort = this.proxyRule!!.forwardRule.port
 
             clientRequest = DefaultHttpRequest(
                     serverRequest.protocolVersion(),
@@ -69,9 +70,9 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                         .channel(NioSocketChannel::class.java)
                         .handler(object : ChannelInitializer<Channel> () {
                             override fun initChannel(ch: Channel) {
-                                if (proxyRule.forwardRule.scheme == HttpScheme.HTTPS) {
+                                if (proxyRule!!.forwardRule.scheme == HttpScheme.HTTPS) {
                                     ch.pipeline().addLast(
-                                            SslContextBuilder.forClient().build().newHandler(ch.alloc(),
+                                            SslContextBuilder.forClient().clientAuth(ClientAuth.NONE).build().newHandler(ch.alloc(),
                                                     remoteHost,
                                                     remotePort)
                                     )
@@ -79,7 +80,7 @@ class FrontendHandler(val config: Config) : SimpleChannelInboundHandler<HttpObje
                                 ch.pipeline().addLast(LoggingHandler())
                                 ch.pipeline().addLast(HttpRequestEncoder())
                                 ch.pipeline().addLast(HttpResponseDecoder())
-                                ch.pipeline().addLast(BackendHandler(ctx.channel() as SocketChannel, proxyRule))
+                                ch.pipeline().addLast(BackendHandler(ctx.channel() as SocketChannel, proxyRule!!))
                             }
                         }).option(ChannelOption.AUTO_READ, false)
 
