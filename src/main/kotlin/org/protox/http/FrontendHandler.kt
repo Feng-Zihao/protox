@@ -7,8 +7,6 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.*
 import io.netty.handler.logging.LoggingHandler
-import io.netty.handler.ssl.ClientAuth
-import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.ReferenceCountUtil
@@ -46,7 +44,7 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
             var serverRequest = msgHolder.poll() as HttpRequest
             var matchRule = config.matchProxyRuleOrNull(serverRequest)
             if (matchRule == null) {
-                ctx.writeAndFlush(BAD_GATEWAY_RESPONSE).addListener {
+                ctx.writeAndFlush(badGatewayResponse()).addListener {
                     clearMsgHolder()
                     (it as ChannelFuture).channel().close()
                 }
@@ -78,20 +76,20 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
         clearMsgHolder()
-        LOGGER.debug("{}", frontendCounter.decrementAndGet())
+//        LOGGER.debug("{}", frontendCounter.decrementAndGet())
         super.channelInactive(ctx)
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        super.exceptionCaught(ctx, cause)
         tryCloseChannel(ctx.channel())
         tryCloseChannel(backChn)
+        super.exceptionCaught(ctx, cause)
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is IdleStateEvent) {
             LOGGER.debug("{}", evt.state())
-            ctx.channel().writeAndFlush(REQUEST_TIMEOUT_RESPONSE).addListener {
+            ctx.channel().writeAndFlush(requestTimeoutResponse()).addListener {
                 ctx.channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(CLOSE)
             }
             tryCloseChannel(backChn)
@@ -99,7 +97,7 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
     }
 
     private fun launchBackendRequest(ctx: ChannelHandlerContext, serverRequest: HttpRequest) {
-        LOGGER.debug("{}", frontendCounter.incrementAndGet())
+//        LOGGER.debug("{}", frontendCounter.incrementAndGet())
 
         val remoteHost = proxyRule!!.getForwardHost(getOriginalHost(serverRequest))
         val remotePort = this.proxyRule!!.forwardRule.port
@@ -111,21 +109,18 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
 
         clientRequest.headers().add(serverRequest.headers())
         clientRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-        clientRequest.headers().set(HttpHeaderNames.HOST, remoteHost)
+//        clientRequest.headers().set(HttpHeaderNames.HOST, remoteHost)
+
 
         val bootstrap = Bootstrap()
                 .group(backendEventLoopGroup)
                 .channel(NioSocketChannel::class.java)
                 .handler(object : ChannelInitializer<Channel>() {
                     override fun initChannel(ch: Channel) {
-                        ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
                         if (proxyRule!!.forwardRule.scheme == HttpScheme.HTTPS) {
-                            ch.pipeline().addLast(
-                                    SslContextBuilder.forClient().clientAuth(ClientAuth.NONE).build().newHandler(ch.alloc(),
-                                            remoteHost,
-                                            remotePort)
-                            )
+                            ch.pipeline().addLast(BACKEND_SSL_CONTEXT.newHandler(ch.alloc(), remoteHost, remotePort))
                         }
+                        ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
                         ch.pipeline().addLast(LoggingHandler())
                         ch.pipeline().addLast(HttpRequestEncoder())
                         ch.pipeline().addLast(HttpResponseDecoder())
@@ -136,9 +131,13 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
         val channelFuture = bootstrap.connect(remoteHost, remotePort)
 
         channelFuture.addListener {
-            backChn = channelFuture.channel()
-            backChn!!.writeAndFlush(clientRequest).addListener {
-                flushMsgHolderThenTryRead(ctx)
+            if (it.isSuccess) {
+                backChn = channelFuture.channel()
+                backChn!!.writeAndFlush(clientRequest).addListener {
+                    flushMsgHolderThenTryRead(ctx)
+                }
+            } else {
+                ctx.fireExceptionCaught(it.cause())
             }
         }
     }

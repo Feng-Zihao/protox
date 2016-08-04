@@ -8,7 +8,7 @@ import io.netty.handler.codec.http.*
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.util.ReferenceCountUtil
 import org.protox.Config
-import org.protox.GATEWAY_TIMEOUT_RESPONSE
+import org.protox.gatewayTimeoutResponse
 import org.protox.tryCloseChannel
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -84,14 +84,14 @@ class BackendHandler(val frontChn: SocketChannel, val proxyRule: Config.ProxyRul
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is IdleStateEvent) {
             LOGGER.debug("{}", evt.state())
-            frontChn.writeAndFlush(GATEWAY_TIMEOUT_RESPONSE).addListener {
+            frontChn.writeAndFlush(gatewayTimeoutResponse()).addListener {
                 frontChn.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(CLOSE)
             }
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        super.exceptionCaught(ctx, cause)
+//        super.exceptionCaught(ctx, cause)
         tryCloseChannel(ctx.channel())
         tryCloseChannel(frontChn)
     }

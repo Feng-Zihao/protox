@@ -3,6 +3,7 @@ package org.protox
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpScheme
 import org.protox.http.WildcardURL
+import org.slf4j.LoggerFactory
 import java.net.URL
 
 /**
@@ -21,6 +22,8 @@ class Config(val listen: Int = 8080,
     }
 
     class ProxyRule(match: String, forward: String) {
+
+        val LOGGER = LoggerFactory.getLogger(ProxyRule::class.java)
 
         val matchRule = WildcardURL(match)
         val forwardRule = WildcardURL(forward)
@@ -62,6 +65,7 @@ class Config(val listen: Int = 8080,
             var url = URL(location)
             val replacedHost = getReturnedHost(url.host)
             val replacedLocation = URL(if (matchRule.scheme!!.equals(HttpScheme.HTTP)) "http" else "https", replacedHost, url.file).toString()
+            LOGGER.debug("{} -> {}", location, replacedLocation)
             return replacedLocation
         }
 

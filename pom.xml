@@ -115,6 +115,7 @@
                 <artifactId>appassembler-maven-plugin</artifactId>
                 <version>1.10</version>
                 <configuration>
+                    <extraJvmArguments>-Xms=50m -Xmx=128m</extraJvmArguments>
                     <useWildcardClassPath>true</useWildcardClassPath>
                     <repositoryLayout>flat</repositoryLayout>
                     <target>${project.build.directory}</target>
