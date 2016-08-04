@@ -1,12 +1,15 @@
 #listen: 8080
-listen: 8443
+listen: 8080
 
-#server-cert:
-#server-key:
+ssl:
+  listen: 8443
+  cert: ''
+  key: ''
+
 rules:
   -
     match: https://tpan.bingosoft.net
-    forward: https://10.201.76.90
+    forward: https://10.201.76.90:8443
 #  -
 #    match: 'gg.local.protox.me'
 #    forward: 'https://ipv4.google.com'

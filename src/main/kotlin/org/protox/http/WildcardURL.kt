@@ -1,6 +1,7 @@
 package org.protox.http
 
 import io.netty.handler.codec.http.HttpScheme
+import org.protox.IPV4_PATTREN
 import org.protox.WILDCARD_URL_PATTERN
 
 /**
@@ -14,6 +15,7 @@ class WildcardURL(text: String) {
     val hostPattern: String
     val isWildcard: Boolean
     val port: Int
+    val isIPv4: Boolean
 
     init {
         if (!WILDCARD_URL_PATTERN.matcher(text).matches()) {
@@ -45,6 +47,8 @@ class WildcardURL(text: String) {
         port = tempPort
         hostPattern = tempHostPattern
         isWildcard = hostPattern.startsWith("*.")
+
+        isIPv4 = IPV4_PATTREN.matcher(hostPattern).matches()
     }
 
 }

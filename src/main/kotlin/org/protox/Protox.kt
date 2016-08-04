@@ -1,6 +1,7 @@
 package org.protox
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.netty.bootstrap.ServerBootstrap
@@ -28,6 +29,7 @@ fun main(args: Array<String>) {
 
     try {
         val mapper = ObjectMapper(YAMLFactory())
+        mapper.propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
         mapper.registerKotlinModule()
 
         val config = mapper.readValue(

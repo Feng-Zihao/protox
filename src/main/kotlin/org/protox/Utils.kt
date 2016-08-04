@@ -41,6 +41,8 @@ val URL_PATTERN = Pattern.compile("(http(s?)://)?(([0-9a-zA-Z-_]+)(\\.[0-9a-zA-Z
 
 val WILDCARD_URL_PATTERN: Pattern = Pattern.compile("((http(s?))://)?((\\*\\.)?([0-9a-zA-Z]+\\.)*([0-9a-zA-Z]+))(:[0-9]+)?")
 
+val IPV4_PATTREN: Pattern = Pattern.compile("([0-9]{1,3}\\.){3}([0-9]{1,3})")
+
 val frontendCounter = AtomicInteger(0)
 
 

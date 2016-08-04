@@ -109,7 +109,10 @@ class FrontendHandler(val config: Config) : ChannelDuplexHandler() {
 
         clientRequest.headers().add(serverRequest.headers())
         clientRequest.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-//        clientRequest.headers().set(HttpHeaderNames.HOST, remoteHost)
+
+        if (proxyRule!!.forwardRule.isIPv4 == false) {
+            clientRequest.headers().set(HttpHeaderNames.HOST, remoteHost)
+        }
 
 
         val bootstrap = Bootstrap()

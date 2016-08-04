@@ -11,8 +11,7 @@ import java.net.URL
  */
 
 class Config(val listen: Int = 8080,
-             val serverCert: String? = null,
-             val serverKey: String? = null,
+             val ssl: SSL? = null,
              val rules: List<ProxyRule> = emptyList()) {
 
     fun matchProxyRuleOrNull(request: HttpRequest): ProxyRule? {
@@ -20,6 +19,8 @@ class Config(val listen: Int = 8080,
             it.match(request)
         }
     }
+
+    class SSL(val listen: Int, val cert: String, val key: String){}
 
     class ProxyRule(match: String, forward: String) {
 
@@ -63,8 +64,12 @@ class Config(val listen: Int = 8080,
 
         fun getReturnedLocation(location: String): String {
             var url = URL(location)
+            if (url.port != matchRule.port) {
+                return location
+            }
             val replacedHost = getReturnedHost(url.host)
             val replacedLocation = URL(if (matchRule.scheme!!.equals(HttpScheme.HTTP)) "http" else "https", replacedHost, url.file).toString()
+            LOGGER.debug("{} {}", forwardRule.hostPattern, matchRule.hostPattern)
             LOGGER.debug("{} -> {}", location, replacedLocation)
             return replacedLocation
         }
