@@ -13,7 +13,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.0.3</kotlin.version>
+        <kotlin.version>1.0.4</kotlin.version>
         <junit.version>4.12</junit.version>
         <netty.version>4.1.0.Final</netty.version>
         <jackson.version>2.7.4</jackson.version>
@@ -72,6 +72,12 @@
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -115,13 +121,12 @@
                 <artifactId>appassembler-maven-plugin</artifactId>
                 <version>1.10</version>
                 <configuration>
-                    <extraJvmArguments>-Xms=50m -Xmx=128m</extraJvmArguments>
+                    <extraJvmArguments>-Xms=50m -Xmx=128m -server</extraJvmArguments>
                     <useWildcardClassPath>true</useWildcardClassPath>
                     <repositoryLayout>flat</repositoryLayout>
                     <target>${project.build.directory}</target>
                     <configurationDirectory>etc</configurationDirectory>
                     <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
-                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
                     <configurationSourceDirectory>src/main/resources</configurationSourceDirectory>
                     <copyConfigurationDirectory>true</copyConfigurationDirectory>
                     <target>${project.build.directory}</target>

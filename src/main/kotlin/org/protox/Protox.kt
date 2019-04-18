@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .childHandler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
-                        ch.pipeline().addLast(FRONTEND_SSL_CONTEXT.newHandler(ch.alloc()))
+//                        ch.pipeline().addLast(FRONTEND_SSL_CONTEXT.newHandler(ch.alloc()))
                         ch.pipeline().addLast(IdleStateHandler(30, 30, 30))
                         ch.pipeline().addLast(LoggingHandler())
                         ch.pipeline().addLast(HttpRequestDecoder())
